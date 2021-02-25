@@ -1,0 +1,31 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/local/include",
+                "/usr/local/include/opencv4",
+                "/usr/local/include/pcl-1.9",
+                "/usr/local/include/vtk-8.1",
+                "/usr/include",
+                "/usr/include/eigen3",
+                "/home/save/ros_catkin_ws/install_isolated/include"
+            ],
+            "browse": {
+                "path": [
+                    "/usr/local/include",
+                    "/usr/include",
+                    "/home/save/ros_catkin_ws/install_isolated/include"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-x64"
+        }
+    ],
+    "version": 4
+}
