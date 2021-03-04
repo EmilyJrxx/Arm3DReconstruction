@@ -1,4 +1,7 @@
 # include "camera.h"
+
+# include <pcl_ros/transforms.h>
+# include <geometry_msgs/TransformStamped.h>
 # include <opencv2/core.hpp>
 # include <opencv2/highgui/highgui.hpp>
 # include <cv_bridge/cv_bridge.h>
@@ -148,10 +151,12 @@ void CameraController::Callback(sensor_msgs::Image::ConstPtr & rgb,
         pcl::PointCloud<PointT>::Ptr cloud_filtered (new pcl::PointCloud<PointT>);
         std::vector<int> indices;
         pcl::removeNaNFromPointCloud(*pcl_cloud, *cloud_filtered, indices);
-
+        pcl::PointCloud<PointT>::Ptr cloud_transformed (new pcl::PointCloud<PointT>);
         // Cloud Transforming
         // -- receiving camera2base transformation from MoveAndTake.py
         // -- transforming p(base) = T(c->b)p(camera)
+        geometry_msgs::TransformStamped c2b_transform = tfBuffer.lookupTransform(robot_frame, camera_frame, ros::Time(0));
+        pcl_ros::transformPointCloud(*cloud_filtered, *cloud_transformed, c2b_transform.transform);
 
         // Data Writing
         std::string rgb_name = output_dir+"rgbs/"+std::to_string(++save_count)+".jpg";
@@ -159,7 +164,7 @@ void CameraController::Callback(sensor_msgs::Image::ConstPtr & rgb,
         std::string cloud_name = output_dir+"clouds/"+std::to_string(save_count)+".ply";
         cv::imwrite(rgb_name, rgb_frame);
         cv::imwrite(depth_name, depth_frame);
-        pcl::io::savePCDFileBinary(cloud_name, *cloud_filtered);
+        pcl::io::savePCDFileBinary(cloud_name, *cloud_transformed); // saving Transformed cloud
         std::cout << "Scene: " << save_count << "saved:" << cloud_name << std::endl;
 
         // Signal Publishing
@@ -183,5 +188,6 @@ tf2_ros::Buffer& CameraController::getTf2Buffer(){
 void CameraController::setTfFrameName(const std::string& _camera_frame,
                                       const std::string& _robot_frame)
 {
-    
+    camera_frame = _camera_frame;
+    robot_frame  = _robot_frame;
 }

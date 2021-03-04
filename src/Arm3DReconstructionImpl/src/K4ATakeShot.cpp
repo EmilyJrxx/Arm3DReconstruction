@@ -21,6 +21,7 @@ int main(int argc, char** argv){
                                     taketrigger_topic, 
                                     readytomove_topic, 
                                     output_dir);
+    k4a_controller.setTfFrameName(camera_frame, base_frame);
     // up til here, subscribers and publishers are all set, tf listener set too.
     tf2_ros::TransformListener tfListener(k4a_controller.getTf2Buffer());
 

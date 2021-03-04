@@ -51,6 +51,11 @@ class CameraController{
         std::string cloud_topic;
         std::string taketrigger_topic;
         std::string readytomove_topic;
+
+        /*Frames*/
+        std::string camera_frame;
+        std::string robot_frame;
+        
         /*Subcribers & Publishers*/
         ros::NodeHandle node;
         message_filters::Subscriber<sensor_msgs::Image> rgb_sub;
