@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(Arm3DReconstructionImpl)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -13,15 +13,20 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   std_msgs
+  geometry_msgs
   message_generation
   tf2
   tf2_ros
+  cv_bridge
+  pcl_conversions
+  pcl_ros
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
-
+find_package(OpenCV REQUIRED)
+find_package(PCL REQUIRED)
+find_package(Boost REQUIRED)
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
@@ -75,7 +80,7 @@ add_message_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  sensor_msgs#   std_msgs
+  std_msgs
 )
 
 ################################################
@@ -108,11 +113,11 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
 #  LIBRARIES Arm3DReconstructionImpl
 #  CATKIN_DEPENDS message_filters roscpp rospy sensor_msgs std_msgs
 #  DEPENDS system_lib
-  CATKIN_DEPENDS message_runtime
+  CATKIN_DEPENDS message_runtime std_msgs roscpp message_filters
 )
 
 ###########
@@ -122,14 +127,15 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/Arm3DReconstructionImpl.cpp
-# )
+add_library(camera include/${PROJECT_NAME}/camera.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -141,7 +147,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/Arm3DReconstructionImpl_node.cpp)
 add_executable(${PROJECT_NAME}_tf2_test src/tf2_test.cpp)
-
+# add_executable(K4ATakeShot src/K4ATakeShot.cpp)
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -159,7 +165,11 @@ add_executable(${PROJECT_NAME}_tf2_test src/tf2_test.cpp)
 target_link_libraries(${PROJECT_NAME}_tf2_test
   ${catkin_LIBRARIES}
 )
-
+# target_link_libraries(K4ATakeShot
+#   camera
+#   ${catkin_LIBRARIES}
+#   ${PCL_LIBRARIES}
+#   ${OpenCV_LIBRARIES})
 #############
 ## Install ##
 #############

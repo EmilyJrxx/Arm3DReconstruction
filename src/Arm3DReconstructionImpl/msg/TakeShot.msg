@@ -1,3 +1,3 @@
 # a msg (signal) to tell the camera controller to take a shot
-Header Header
+Header header
 bool if_take

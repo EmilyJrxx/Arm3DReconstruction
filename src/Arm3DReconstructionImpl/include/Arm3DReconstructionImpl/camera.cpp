@@ -1,6 +1,7 @@
 # include "camera.h"
 
 # include <pcl_ros/transforms.h>
+# include <std_msgs/Header.h>
 # include <geometry_msgs/TransformStamped.h>
 # include <opencv2/core.hpp>
 # include <opencv2/highgui/highgui.hpp>
@@ -15,13 +16,17 @@
 
 typedef pcl::PointXYZRGB PointT;
 
+CameraController::~CameraController(){
+
+}
 CameraController::CameraController():
     rgb_topic(), 
     depth_topic(),
     cloud_topic(), 
     taketrigger_topic(),
     readytomove_topic(), // default value
-    output_dir()
+    output_dir(),
+    sync(MySyncPolicy(10))
 {
     // TODO: check if ros::init executed, if not abort
     rgb_sub.subscribe(node, rgb_topic, 3);
@@ -31,7 +36,7 @@ CameraController::CameraController():
     move_signal_pub = node.advertise<Arm3DReconstructionImpl::MoveReady> (readytomove_topic, 3);
     // TODO: check if it's OK when sync's SyncPolicy is not specified
     sync.connectInput(rgb_sub, depth_sub, cloud_sub, taketrigger_sub);
-    
+    sync.registerCallback(boost::bind(&CameraController::Callback, this, _1, _2, _3, _4, move_signal_pub));
     // TODO: when & where shall this tfListener be created
     static tf2_ros::TransformListener tfListener(tfBuffer);
 
@@ -46,7 +51,8 @@ CameraController::CameraController(const std::string & _rgb_topic,
                                     rgb_topic(_rgb_topic), depth_topic(_depth_topic),
                                     cloud_topic(_cloud_topic), taketrigger_topic(_taketrigger_topic),
                                     readytomove_topic(_readytomove_topic),
-                                    output_dir("") // default value
+                                    output_dir(""), // default value
+                                    sync(MySyncPolicy(10))
 {
     // TODO: check if ros::init executed, if not abort
     rgb_sub.subscribe(node, rgb_topic, 3);
@@ -56,7 +62,7 @@ CameraController::CameraController(const std::string & _rgb_topic,
     move_signal_pub = node.advertise<Arm3DReconstructionImpl::MoveReady> (readytomove_topic, 3);
     // TODO: check if it's OK when sync's SyncPolicy is not specified
     sync.connectInput(rgb_sub, depth_sub, cloud_sub, taketrigger_sub);
-    
+    sync.registerCallback(boost::bind(&CameraController::Callback, this, _1, _2, _3, _4, move_signal_pub));
     // TODO: when & where shall this tfListener be created
     static tf2_ros::TransformListener tfListener(tfBuffer);
 
@@ -72,7 +78,8 @@ CameraController::CameraController(const std::string & _rgb_topic,
                                     rgb_topic(_rgb_topic), depth_topic(_depth_topic),
                                     cloud_topic(_cloud_topic), taketrigger_topic(_taketrigger_topic),
                                     readytomove_topic(_readytomove_topic),
-                                    output_dir(_output_dir)
+                                    output_dir(_output_dir),
+                                    sync(MySyncPolicy(10))
 {
     // TODO: check if ros::init executed, if not abort
     rgb_sub.subscribe(node, rgb_topic, 3);
@@ -82,42 +89,20 @@ CameraController::CameraController(const std::string & _rgb_topic,
     move_signal_pub = node.advertise<Arm3DReconstructionImpl::MoveReady> (readytomove_topic, 3);
     // TODO: check if it's OK when sync's SyncPolicy is not specified
     sync.connectInput(rgb_sub, depth_sub, cloud_sub, taketrigger_sub);
-    
+    sync.registerCallback(boost::bind( &CameraController::Callback, this, _1, _2, _3, _4, move_signal_pub));
+
     // TODO: when & where shall this tfListener be created
     static tf2_ros::TransformListener tfListener(tfBuffer);
 
     save_count = 0;
 }
 
-CameraController::CameraController(const std::string & _rgb_topic, 
-                         const std::string & _depth_topic,
-                         const std::string & _cloud_topic, 
-                         const std::string & _taketrigger_topic,
-                         const std::string & _readytomove_topic):
-                         rgb_topic(_rgb_topic), depth_topic(_depth_topic),
-                         cloud_topic(_cloud_topic), taketrigger_topic(_taketrigger_topic),
-                         readytomove_topic(_readytomove_topic) 
-{
-    // TODO: check if ros::init executed, if not abort
-    rgb_sub.subscribe(node, rgb_topic, 3);
-    depth_sub.subscribe(node, depth_topic, 3);
-    cloud_sub.subscribe(node, cloud_topic, 3);
-    taketrigger_sub.subscribe(node, taketrigger_topic, 3);
-    move_signal_pub = node.advertise<Arm3DReconstructionImpl::MoveReady> (readytomove_topic, 3);
-    // TODO: check if it's OK when sync's SyncPolicy is not specified
-    sync.connectInput(rgb_sub, depth_sub, cloud_sub, taketrigger_sub);
-    sync.registerCallback(boost::bind(&Callback, _1, _2, _3, _4, move_signal_pub));
-    // TODO: when & where shall this tfListener be created
-    static tf2_ros::TransformListener tfListener(tfBuffer);
-
-    save_count = 0;
-}
-
-void CameraController::Callback(sensor_msgs::Image::ConstPtr & rgb, 
-                                sensor_msgs::Image::ConstPtr & depth,
-                                sensor_msgs::PointCloud2::ConstPtr & cloud,
-                                Arm3DReconstructionImpl::TakeShot::ConstPtr & signal,
-                                const ros::Publisher & publisher)
+void CameraController::Callback(const sensor_msgs::Image::ConstPtr & rgb, 
+                                const sensor_msgs::Image::ConstPtr & depth,
+                                const sensor_msgs::PointCloud2::ConstPtr & cloud,
+                                const Arm3DReconstructionImpl::TakeShot::ConstPtr & signal,
+                                const ros::Publisher & signal_publisher
+                                )
 {
     // Call for camera service (Actively)
     // Converting Camera data
@@ -125,7 +110,7 @@ void CameraController::Callback(sensor_msgs::Image::ConstPtr & rgb,
     // Frame Transforming
     // Saving Data
     // Publish "Next move ready" signal
-    if (signal->if_take){
+    // if (signal->if_take){
         cv_bridge::CvImagePtr rgb_ptr;
         cv_bridge::CvImagePtr depth_ptr;
         try{
@@ -173,12 +158,12 @@ void CameraController::Callback(sensor_msgs::Image::ConstPtr & rgb,
         move_signal.header.stamp = ros::Time::now();
         move_signal.header.frame_id = "/signal";
         move_signal.if_ready = true;
-        publisher.publish(move_signal);
-    }
-    else{
-        std::cerr << "Not receiving Take a Shot signal, Aborting.\n";
-        return;
-    }    
+        // publisher.publish(move_signal);
+    // }
+    // else{
+    //     std::cerr << "Not receiving Take a Shot signal, Aborting.\n";
+    //     return;
+    // }    
 }
 
 tf2_ros::Buffer& CameraController::getTf2Buffer(){

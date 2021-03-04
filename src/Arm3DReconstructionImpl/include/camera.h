@@ -9,6 +9,7 @@
 # include <sensor_msgs/Image.h>
 # include <sensor_msgs/CameraInfo.h>
 # include <sensor_msgs/PointCloud2.h>
+# include <geometry_msgs/Vector3Stamped.h>
 # include <Arm3DReconstructionImpl/MoveReady.h>
 # include <Arm3DReconstructionImpl/TakeShot.h>
 
@@ -18,7 +19,7 @@
 typedef message_filters::sync_policies::ApproximateTime<
         sensor_msgs::Image,
         sensor_msgs::Image,
-        sensor_msgs::PointCloud2, 
+        sensor_msgs::PointCloud2,
         Arm3DReconstructionImpl::TakeShot> MySyncPolicy;
 
 class CameraController{
@@ -35,11 +36,12 @@ class CameraController{
                          const std::string & _taketrigger_topic,
                          const std::string & _readytomove_topic,
                          const std::string & _output_dir);
-        void Callback(sensor_msgs::Image::ConstPtr & rgb, 
-                    sensor_msgs::Image::ConstPtr & depth,
-                    sensor_msgs::PointCloud2::ConstPtr & cloud,
-                    Arm3DReconstructionImpl::TakeShot::ConstPtr & signal,
-                    const ros::Publisher & publisher);
+        void Callback(const sensor_msgs::Image::ConstPtr & rgb, 
+                      const sensor_msgs::Image::ConstPtr & depth,
+                      const sensor_msgs::PointCloud2::ConstPtr & cloud,
+                      const Arm3DReconstructionImpl::TakeShot::ConstPtr & signal,
+                      const ros::Publisher & signal_publisher
+                    );
         ~CameraController();
         tf2_ros::Buffer& getTf2Buffer();
         void setTfFrameName(const std::string& _camera_frame,
